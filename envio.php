@@ -4,10 +4,10 @@
 /***	CONFIGURACIÓN		***/
 /***						***/
 /******************************/
-$destinatario = 'AAAA@outlook.com'; // dirección de destino del email
-$usrSMTP = 'AAAA@outlook.com'; // mail de la cuenta SMTP
-$pasSMTP = '****'; // contraseña de la cuenta SMTP
-$sk = '***'; // clave privada de Google Recaptcha
+$destinatario = 'AAA@outlook.es'; // dirección de destino del email
+$usrSMTP = 'BBB@gmail.com'; // mail de la cuenta SMTP
+$pasSMTP = 'CCC'; // contraseña de la cuenta SMTP
+$sk = 'DDD'; // clave privada de Google Recaptcha
 
 
 /******************************/
@@ -40,8 +40,26 @@ use PHPMailer\PHPMailer\Exception;
 if(isset($_POST['g-recaptcha-response'])) {
 	$captcha=$_POST['g-recaptcha-response'];
 
-	$urlRecaptcha = "https://www.google.com/recaptcha/api/siteverify?secret=".$sk."&response=".$captcha."&remoteip=".$_SERVER['REMOTE_ADDR'];
-	$response=json_decode(file_get_contents($urlRecaptcha), true);
+	//$urlRecaptcha = "https://www.google.com/recaptcha/api/siteverify?secret=".$sk."&response=".$captcha."&remoteip=".$_SERVER['REMOTE_ADDR'];
+	//$response=json_decode(file_get_contents($urlRecaptcha), true);
+	$curl = curl_init();
+
+	curl_setopt_array($curl, [
+		CURLOPT_URL => "https://www.google.com/recaptcha/api/siteverify",
+		CURLOPT_POST => true,
+		CURLOPT_POSTFIELDS => [
+			'secret'   => $sk,
+			'response' => $captcha,
+			'remoteip' => $_SERVER['REMOTE_ADDR']
+		],
+		CURLOPT_RETURNTRANSFER => true
+	]);
+	
+	$responseData = curl_exec($curl);
+	curl_close($curl);
+
+	$response = json_decode($responseData, true);
+
 	if($response['success'] == true) {
 
 		require('PHPMailer/src/Exception.php');
@@ -54,10 +72,10 @@ if(isset($_POST['g-recaptcha-response'])) {
 		try {
 			//Server settings
 			$mail->isSMTP();                                            //Send using SMTP
-			$mail->Host       = 'smtp.office365.com';                   //Set the SMTP server to send through
+			$mail->Host       = 'smtp.gmail.com';                   	//Set the SMTP server to send through
 			$mail->SMTPAuth   = true;                                   //Enable SMTP authentication
 			$mail->Username   = $usrSMTP;                     			//SMTP username
-			$mail->Password   = $pasSMTP;                              //SMTP password
+			$mail->Password   = $pasSMTP;                              	//SMTP password
 			$mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;			//Enable implicit TLS encryption
 			$mail->Port       = 587;                                    //TCP port to connect to; use 587 if you have set `SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS`
 			$mail->SMTPDebug  = 0;                      				//Enable verbose debug output; set value to 2
@@ -67,6 +85,13 @@ if(isset($_POST['g-recaptcha-response'])) {
 			$mail->setFrom($usrSMTP);
 			$mail->addAddress($destinatario);     					//Add a recipient
 			$mail->addReplyTo($email, $nombre);
+
+			// Attachment
+			foreach($_FILES as $nombre_campo => $valor){
+				if ($valor['error'] == UPLOAD_ERR_OK && is_uploaded_file($valor['tmp_name'])) {
+					$mail->addAttachment($valor['tmp_name'], $valor['name']);
+				}
+			}
 
 			//Content
 			$mail->isHTML(true);                                  //Set email format to HTML
@@ -78,14 +103,14 @@ if(isset($_POST['g-recaptcha-response'])) {
 			$mail->send();
 			echo "ok";
 		} catch (Exception $e) {
-			echo "error";
+			echo "error: {$mail->ErrorInfo}";
 		}
 
 	} else { // recaptcha
-		echo "error";
+		echo "error: recaptcha 2". $response;
 	}
 } else { // recaptcha
-	echo "error";
+	echo "error: recaptcha 1". $response;
 }
 
 ?>

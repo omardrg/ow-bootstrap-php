@@ -107,10 +107,10 @@ if(isset($_POST['g-recaptcha-response'])) {
 		}
 
 	} else { // recaptcha
-		echo "error: recaptcha 2". $response;
+		echo "error: recaptcha 2";
 	}
 } else { // recaptcha
-	echo "error: recaptcha 1". $response;
+	echo "error: recaptcha 1";
 }
 
 ?>
